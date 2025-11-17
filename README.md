@@ -1,6 +1,6 @@
-# gleamhome
+# GleamHome AI
 
-A new Flutter project.
+An application to that use AI to clean/sort/manage your home
 
 ## Getting Started
 
