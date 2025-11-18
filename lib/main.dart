@@ -5,6 +5,10 @@ import 'config/app_constants.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/camera_screen.dart';
+import 'screens/photo_review_screen.dart';
+import 'screens/analysis_screen.dart';
+import 'screens/suggestion_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -25,6 +29,10 @@ class MyApp extends StatelessWidget {
         '/': (context) => const OnboardingScreen(),
         '/auth': (context) => const AuthScreen(),
         '/home': (context) => const HomeScreen(),
+        '/camera': (context) => const CameraScreen(),
+        '/photo-review': (context) => const PhotoReviewScreen(),
+        '/analysis': (context) => const AnalysisScreen(),
+        '/suggestion': (context) => const SuggestionScreen(),
       },
       debugShowCheckedModeBanner: false,
     );
