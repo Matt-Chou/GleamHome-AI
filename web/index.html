@@ -31,6 +31,25 @@
 
   <title>gleamhome</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Google Sign-In -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    
+    // Firebase config will be injected by Flutter at runtime
+    // This is a placeholder for secure configuration
+    const firebaseConfig = window.firebaseConfig || {};
+    
+    if (Object.keys(firebaseConfig).length > 0) {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      window.firebaseAuth = auth;
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'firebase_options_secure.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
 import 'screens/onboarding_screen.dart';
@@ -10,7 +13,15 @@ import 'screens/photo_review_screen.dart';
 import 'screens/analysis_screen.dart';
 import 'screens/suggestion_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 載入環境變數
+  await dotenv.load(fileName: ".env");
+  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const ProviderScope(child: MyApp()));
 }
 

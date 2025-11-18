@@ -19,12 +19,13 @@ class AuthState {
   }
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  final Ref ref;
+class AuthNotifier extends Notifier<AuthState> {
   late final AuthService _authService;
 
-  AuthNotifier(this.ref) : super(const AuthState()) {
+  @override
+  AuthState build() {
     _authService = ref.read(authServiceProvider);
+    return const AuthState();
   }
 
   Future<void> restoreSession() async {
@@ -53,8 +54,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((
-  ref,
-) {
-  return AuthNotifier(ref);
-});
+final authNotifierProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

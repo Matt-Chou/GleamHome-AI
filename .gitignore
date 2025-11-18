@@ -13,6 +13,16 @@
 migrate_working_dir/
 Proposal.md
 
+# Environment variables and sensitive files
+.env
+.env.local
+.env.production
+.env.staging
+firebase_options_prod.dart
+google-services-prod.json
+android/app/google-services.json
+GoogleService-Info-prod.plist
+
 # IntelliJ related
 *.iml
 *.ipr

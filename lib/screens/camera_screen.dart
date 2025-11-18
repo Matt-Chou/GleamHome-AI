@@ -89,7 +89,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('拍照分析'),
+        title: const Text('圖片分析'),
         centerTitle: true,
         elevation: 0,
       ),

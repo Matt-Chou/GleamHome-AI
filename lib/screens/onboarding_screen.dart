@@ -1,6 +1,12 @@
 /// 歡迎/引導屏幕
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../config/app_constants.dart';
+import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -12,11 +18,14 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   late PageController _pageController;
   int _currentPage = 0;
+  late final AuthService? authService;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    // 開發階段：暫時不初始化 AuthService，避免 API 連接錯誤
+    authService = null;
   }
 
   @override
@@ -28,37 +37,88 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            // 按左方向鍵回到上一頁
+            if (_currentPage > 0) {
+              _pageController.previousPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            // 按右方向鍵前往下一頁
+            if (_currentPage < 3) {
+              _pageController.nextPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+            return KeyEventResult.handled;
+          }
+          
+          return KeyEventResult.ignored;
+        },
+        child: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
+              child: GestureDetector(
+                onPanUpdate: (details) {
+                  // 檢測水平滑動手勢
+                  if (details.delta.dx > 5) {
+                    // 向右滑動，回到上一頁
+                    if (_currentPage > 0) {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  } else if (details.delta.dx < -5) {
+                    // 向左滑動，前往下一頁
+                    if (_currentPage < 3) {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  }
                 },
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  // 提高滑鼠滾輪和拖拽的敏感度
+                  physics: const BouncingScrollPhysics(),
                 children: [
                   _buildIntroPage(
                     title: '歡迎來到 ${AppConstants.appName}',
-                    subtitle: '智能居家收納助手',
+                    subtitle: '智能居家收納與清潔助手',
                     icon: Icons.home,
                   ),
                   _buildIntroPage(
                     title: '只需拍照',
-                    subtitle: '簡單拍攝房間照片',
+                    subtitle: '簡單拍攝照片',
                     icon: Icons.camera_alt,
                   ),
                   _buildIntroPage(
                     title: 'AI 分析',
-                    subtitle: '智能識別和分析房間布局',
+                    subtitle: '智能識別和分析',
                     icon: Icons.auto_awesome,
                   ),
                   _buildIntroPage(
                     title: '獲得建議',
-                    subtitle: '獲得具體的收納整理方案',
+                    subtitle: '獲得具體的收納、清潔方案',
                     icon: Icons.lightbulb,
                   ),
                 ],
+                ),
               ),
             ),
             Padding(
@@ -84,48 +144,81 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(height: 24),
                   if (_currentPage == 3)
-                    Column(
-                      children: [
-                        FilledButton(
-                          onPressed: () {
-                            // 導航到認證屏幕
-                            Navigator.of(context).pushReplacementNamed('/auth');
-                          },
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                          child: const Text('開始使用'),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: () {
-                            // 免費試用
+                    OutlinedButton(
+                      onPressed: () async {
+                        try {
+                          // 使用 Firebase Auth 進行 登入
+                          final auth = FirebaseAuth.instance;
+                          final googleProvider = GoogleAuthProvider();
+                          
+                          final userCredential = await auth.signInWithPopup(googleProvider);
+                          final user = userCredential.user;
+                          
+                          if (user != null) {
+                            // 顯示登入成功訊息
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('歡迎，${user.displayName ?? user.email}！')),
+                            );
+                            
+                            // 開發階段：直接跳轉到主頁，不調用後端API
                             Navigator.of(context).pushReplacementNamed('/home');
-                          },
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                          ),
-                          child: const Text('免費試用'),
-                        ),
-                      ],
-                    )
-                  else
-                    FilledButton(
-                      onPressed: () {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('登入已取消')),
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('登入錯誤: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('登入錯誤: ${e.toString()}')),
+                          );
+                        }
                       },
-                      style: FilledButton.styleFrom(
+                      style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
                       ),
-                      child: const Text('下一步'),
+                      child: const Text('登入'),
+                    )
+                  else
+                    Row(
+                      children: [
+                        if (_currentPage > 0)
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(48),
+                              ),
+                              child: const Text('上一步'),
+                            ),
+                          ),
+                        if (_currentPage > 0) const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            child: const Text('下一步'),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),
             ),
           ],
+        ),
         ),
       ),
     );
