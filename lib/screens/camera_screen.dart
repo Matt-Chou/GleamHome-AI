@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart' as cam;
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../models/photo_analysis.dart';
 
 /// 相機屏幕 - 實時拍照和選擇照片
@@ -13,9 +18,72 @@ class CameraScreen extends ConsumerStatefulWidget {
 }
 
 class _CameraScreenState extends ConsumerState<CameraScreen> {
+  // Web/Android/iOS platform detection
   final ImagePicker _imagePicker = ImagePicker();
+  cam.CameraController? _cameraController; // Only for Android/iOS
+  List<cam.CameraDescription>? _cameras;
   XFile? _selectedImage;
   bool _showPreview = false;
+  bool _isCameraInitialized = false;
+  bool _isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+  @override
+  bool _onlyGallery = false;
+  bool _autoTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize camera only for Android/iOS
+    if (_isMobile) {
+      _initMobileCamera();
+    }
+    // 延遲觸發：根據參數自動開啟相機或相簿，且不顯示任何按鈕
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['pickGallery'] == true) {
+        setState(() {
+          _onlyGallery = true;
+        });
+        if (!_autoTriggered) {
+          _autoTriggered = true;
+          await _pickFromGallery();
+        }
+      } else {
+        setState(() {
+          _onlyGallery = false;
+        });
+        if (!_autoTriggered) {
+          _autoTriggered = true;
+          await _takePhoto();
+        }
+      }
+    });
+  }
+
+  Future<void> _initMobileCamera() async {
+    try {
+      _cameras = await cam.availableCameras();
+      if (_cameras != null && _cameras!.isNotEmpty) {
+        _cameraController = cam.CameraController(
+          _cameras![0],
+          cam.ResolutionPreset.medium,
+        );
+        await _cameraController!.initialize();
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Camera init error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,85 +101,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   /// 構建相機視圖
   Widget _buildCameraView() {
-    return Column(
-      children: [
-        // 提示區域
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
-          child: Column(
-            children: [
-              Icon(
-                Icons.photo_camera_outlined,
-                size: 48,
-                color: Theme.of(context).primaryColor,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '拍照你的房間或物品',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '拍攝清晰的照片可以獲得更準確的分析結果',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+    // 平台分支：Web 使用 image_picker，Android/iOS 使用 camera
+    if (kIsWeb) {
+      // Web: 只能用 image_picker (無法即時預覽)
+      return _buildWebCameraView();
+    } else if (_isMobile) {
+      // Android/iOS: 使用 camera plugin
+      return _buildMobileCameraView();
+    } else {
+      // 其他平台 fallback
+      return Center(child: Text('此平台暫不支援相機功能'));
+    }
+  }
 
-        // 按鈕區域
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 拍照按鈕
-              FloatingActionButton.extended(
-                onPressed: _takePhoto,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('拍照'),
-                heroTag: 'camera_btn',
-              ),
-              const SizedBox(height: 24),
+  // Web 相機 UI（支援拍照與相簿上傳，無即時預覽）
+  Widget _buildWebCameraView() {
+    // 只顯示 loading 或預覽，不顯示任何按鈕
+    if (_showPreview && _selectedImage != null) {
+      return _buildPhotoPreview();
+    }
+    return const Center(child: CircularProgressIndicator());
+  }
 
-              // 從相冊選擇
-              OutlinedButton.icon(
-                onPressed: _pickFromGallery,
-                icon: const Icon(Icons.image),
-                label: const Text('選擇照片'),
-              ),
-            ],
-          ),
-        ),
-
-        // 幫助提示
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.grey[100],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '拍照提示',
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '• 確保光線充足\n'
-                '• 保持相機穩定\n'
-                '• 包含整個房間或物品\n'
-                '• 避免過度傾斜或模糊',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  // Android/iOS 相機 UI（即時預覽，支援相簿上傳）
+  Widget _buildMobileCameraView() {
+    // 只顯示 loading 或預覽，不顯示任何按鈕
+    if (_showPreview && _selectedImage != null) {
+      return _buildPhotoPreview();
+    }
+    return const Center(child: CircularProgressIndicator());
   }
 
   /// 構建照片預覽視圖
@@ -122,10 +140,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         Expanded(
           child: Container(
             color: Colors.black,
-            child: Image.file(
-              File(_selectedImage!.path),
-              fit: BoxFit.contain,
-            ),
+            child: Image.file(File(_selectedImage!.path), fit: BoxFit.contain),
           ),
         ),
 
@@ -207,25 +222,51 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
-  /// 拍照
+  /// 拍照（平台分支）
   Future<void> _takePhoto() async {
-    try {
-      final XFile? photo = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 90,
-      );
-
-      if (photo != null) {
+    if (kIsWeb) {
+      // Web: 使用 image_picker
+      try {
+        final XFile? photo = await _imagePicker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 90,
+        );
+        if (photo != null) {
+          setState(() {
+            _selectedImage = photo;
+            _showPreview = true;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Web 無法打開相機: $e')));
+        }
+      }
+    } else if (_isMobile &&
+        _cameraController != null &&
+        _cameraController!.value.isInitialized) {
+      // Android/iOS: 使用 camera plugin
+      try {
+        final cam.XFile photo = await _cameraController!.takePicture();
         setState(() {
-          _selectedImage = photo;
+          _selectedImage = XFile(photo.path);
           _showPreview = true;
         });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('無法拍照: $e')));
+        }
       }
-    } catch (e) {
+    } else {
+      // 其他平台或初始化失敗
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('無法打開相機: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('此平台暫不支援相機功能')));
       }
     }
   }
@@ -246,9 +287,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('無法存取相冊: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('無法存取相冊: $e')));
       }
     }
   }

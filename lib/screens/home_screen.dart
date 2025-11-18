@@ -23,29 +23,33 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.home,
-              size: 80,
-              color: Theme.of(context).primaryColor,
-            ),
+            Icon(Icons.home, size: 80, color: Theme.of(context).primaryColor),
             const SizedBox(height: 24),
-            Text(
-              '主頁面',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            Text('主頁面', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 16),
-            Text(
-              '項目架構已建立完成',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            Text('項目架構已建立完成', style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 32),
-            FilledButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('開始拍照功能')),
-                );
-              },
-              child: const Text('開始拍照'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    // 導航到拍照頁面
+                    Navigator.of(context).pushNamed('/camera');
+                  },
+                  child: const Text('開始拍照'),
+                ),
+                const SizedBox(width: 24),
+                OutlinedButton(
+                  onPressed: () {
+                    // 導航到拍照頁面並自動觸發相簿選擇
+                    Navigator.of(
+                      context,
+                    ).pushNamed('/camera', arguments: {'pickGallery': true});
+                  },
+                  child: const Text('上傳圖片'),
+                ),
+              ],
             ),
           ],
         ),
@@ -56,18 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() => _selectedIndex = index);
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: '主頁',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: '歷史',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: '設置',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: '主頁'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: '歷史'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: '設置'),
         ],
       ),
     );

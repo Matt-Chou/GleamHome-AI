@@ -28,7 +28,9 @@ class AIConversation {
           .toList(),
       totalTokensUsed: json['total_tokens_used'],
       createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 

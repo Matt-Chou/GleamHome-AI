@@ -13,15 +13,13 @@ class ApiService {
 
   void _initializeDio() {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? AppConstants.apiBaseUrl;
-    
+
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       ),
     );
 
@@ -58,10 +56,7 @@ class ApiService {
     T Function(dynamic)? fromJson,
   }) async {
     try {
-      final response = await _dio.get(
-        path,
-        queryParameters: queryParameters,
-      );
+      final response = await _dio.get(path, queryParameters: queryParameters);
       return fromJson != null ? fromJson(response.data) : response.data as T;
     } on DioException catch (e) {
       throw _handleDioException(e);

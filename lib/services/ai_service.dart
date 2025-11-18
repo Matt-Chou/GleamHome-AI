@@ -22,10 +22,7 @@ class AIService {
         if (roomLabel != null) 'label': roomLabel,
       });
 
-      final response = await apiService.post(
-        '/api/analyze',
-        data: formData,
-      );
+      final response = await apiService.post('/api/analyze', data: formData);
 
       return PhotoAnalysis.fromJson(response);
     } catch (e) {
@@ -40,10 +37,7 @@ class AIService {
     try {
       final response = await apiService.post(
         '/api/suggestions',
-        data: {
-          'analysis_id': analysisId,
-          'preferences': userPreferences ?? {},
-        },
+        data: {'analysis_id': analysisId, 'preferences': userPreferences ?? {}},
       );
 
       final suggestions = (response['suggestions'] as List)
@@ -63,10 +57,7 @@ class AIService {
     try {
       final response = await apiService.post(
         '/api/conversation',
-        data: {
-          'analysis_id': analysisId,
-          'user_message': userMessage,
-        },
+        data: {'analysis_id': analysisId, 'user_message': userMessage},
       );
 
       return response['ai_response'];

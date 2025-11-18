@@ -14,7 +14,8 @@ class ApiConfig {
   static const String analyze = '/analyze';
   static const String generateSuggestions = '/suggestions';
   static const String conversation = '/conversation';
-  static const String conversationHistory = '/conversation/{analysis_id}/history';
+  static const String conversationHistory =
+      '/conversation/{analysis_id}/history';
 
   // 歷史記錄端點
   static const String analysisHistory = '/history/analyses';

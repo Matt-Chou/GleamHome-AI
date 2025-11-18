@@ -6,10 +6,7 @@ import 'dart:io';
 class PhotoReviewScreen extends ConsumerStatefulWidget {
   final String? photoPath;
 
-  const PhotoReviewScreen({
-    super.key,
-    this.photoPath,
-  });
+  const PhotoReviewScreen({super.key, this.photoPath});
 
   @override
   ConsumerState<PhotoReviewScreen> createState() => _PhotoReviewScreenState();
@@ -67,22 +64,34 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
               color: Colors.black,
               child: _currentPhotoPath.isNotEmpty
                   ? ColorFiltered(
-                      colorFilter: ColorFilter.matrix(
-                        [
-                          1, 0, 0, 0, 0,
-                          0, 1, 0, 0, 0,
-                          0, 0, 1, 0, 0,
-                          0, 0, 0, _brightness, 0,
-                        ],
-                      ),
+                      colorFilter: ColorFilter.matrix([
+                        1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        _brightness,
+                        0,
+                      ]),
                       child: Image.file(
                         File(_currentPhotoPath),
                         fit: BoxFit.contain,
                       ),
                     )
-                  : const Center(
-                      child: Text('未找到照片'),
-                    ),
+                  : const Center(child: Text('未找到照片')),
             ),
           ),
 
@@ -134,17 +143,12 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.grey[300]!),
-              ),
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '房間類型',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
+                Text('房間類型', style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 50,
@@ -176,9 +180,7 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.grey[300]!),
-              ),
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
             ),
             child: Column(
               children: [
@@ -204,9 +206,8 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
                             ),
                             Text(
                               '您當前有 550 tokens 額度',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
-                                  ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: Colors.grey),
                             ),
                           ],
                         ),

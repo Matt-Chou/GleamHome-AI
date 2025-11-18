@@ -7,11 +7,7 @@ class AnalysisScreen extends ConsumerStatefulWidget {
   final String? photoPath;
   final String? roomType;
 
-  const AnalysisScreen({
-    super.key,
-    this.photoPath,
-    this.roomType,
-  });
+  const AnalysisScreen({super.key, this.photoPath, this.roomType});
 
   @override
   ConsumerState<AnalysisScreen> createState() => _AnalysisScreenState();
@@ -111,7 +107,9 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Theme.of(context).primaryColor.withOpacity(0.2),
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.2),
                             width: 3,
                           ),
                         ),
@@ -149,13 +147,15 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen>
 
                       // 中央圖標
                       Icon(
-                        Icons.auto_awesome,
-                        size: 50,
-                        color: Theme.of(context).primaryColor,
-                      )
-                          .animate(onPlay: (controller) {
-                        controller.repeat(reverse: true);
-                      })
+                            Icons.auto_awesome,
+                            size: 50,
+                            color: Theme.of(context).primaryColor,
+                          )
+                          .animate(
+                            onPlay: (controller) {
+                              controller.repeat(reverse: true);
+                            },
+                          )
                           .scale(
                             begin: const Offset(0.9, 0.9),
                             end: const Offset(1.1, 1.1),
@@ -170,9 +170,9 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen>
                 Text(
                   '${((_currentStep + 1) / _steps.length * 100).toStringAsFixed(0)}%',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -180,8 +180,8 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen>
                 Text(
                   _steps[_currentStep],
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -253,10 +253,11 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen>
                                 color: isCurrent
                                     ? Theme.of(context).primaryColor
                                     : isCompleted
-                                        ? Colors.grey[700]
-                                        : Colors.grey[400],
-                                fontWeight:
-                                    isCurrent ? FontWeight.w600 : FontWeight.normal,
+                                    ? Colors.grey[700]
+                                    : Colors.grey[400],
+                                fontWeight: isCurrent
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                               ),
                             ),
                           ),

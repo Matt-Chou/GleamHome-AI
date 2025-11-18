@@ -43,7 +43,7 @@ class QuotaService {
           'tokens_consumed': tokensConsumed,
         },
       );
-      
+
       // 刷新額度狀態
       await getQuotaStatus();
     } catch (e) {

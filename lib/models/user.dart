@@ -29,7 +29,9 @@ class User {
       provider: json['provider'],
       subscriptionTier: _parseSubscriptionTier(json['subscription_tier']),
       createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 

@@ -61,12 +61,7 @@ class RecommendedProduct {
   final double? price;
   final String? imageUrl;
 
-  RecommendedProduct({
-    required this.name,
-    this.url,
-    this.price,
-    this.imageUrl,
-  });
+  RecommendedProduct({required this.name, this.url, this.price, this.imageUrl});
 
   factory RecommendedProduct.fromJson(Map<String, dynamic> json) {
     return RecommendedProduct(

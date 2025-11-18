@@ -12,11 +12,7 @@ class SuggestionScreen extends ConsumerStatefulWidget {
 class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
   // 模擬數據
   final double _cleanlinessScore = 6.5;
-  final List<String> _mainIssues = [
-    '衣服堆積在地板上',
-    '書籍隨意放置',
-    '缺乏收納空間',
-  ];
+  final List<String> _mainIssues = ['衣服堆積在地板上', '書籍隨意放置', '缺乏收納空間'];
 
   final List<Map<String, dynamic>> _suggestions = [
     {
@@ -75,9 +71,9 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                 children: [
                   Text(
                     '整齊度評分',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.white,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(color: Colors.white),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -87,9 +83,7 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                         children: [
                           Text(
                             _cleanlinessScore.toStringAsFixed(1),
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
+                            style: Theme.of(context).textTheme.displaySmall
                                 ?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -97,10 +91,8 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                           ),
                           Text(
                             '/ 10.0',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.white70,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.white70),
                           ),
                         ],
                       ),
@@ -119,9 +111,9 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                   const SizedBox(height: 16),
                   Text(
                     '改善潛力: 預估可提升至 8.5/10',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white70,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -137,8 +129,8 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                   Text(
                     '發現的主要問題',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ..._mainIssues.map((issue) {
@@ -158,9 +150,7 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                               color: Colors.orange[600],
                             ),
                             const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(issue),
-                            ),
+                            Expanded(child: Text(issue)),
                           ],
                         ),
                       ),
@@ -181,8 +171,8 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                   Text(
                     '分步建議方案',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ..._suggestions.map((suggestion) {
@@ -198,9 +188,7 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey[300]!),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey[300]!)),
               ),
               child: Column(
                 children: [
@@ -342,13 +330,16 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
                     Expanded(
                       child: Row(
                         children: [
-                          Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                          Icon(
+                            Icons.schedule,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             suggestion['time'],
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -368,16 +359,13 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
           // 詳情按鈕
           Container(
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.grey[300]!),
-              ),
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
             ),
             child: TextButton(
               onPressed: () {
-                Navigator.of(context).pushNamed(
-                  '/suggestion-detail',
-                  arguments: suggestion,
-                );
+                Navigator.of(
+                  context,
+                ).pushNamed('/suggestion-detail', arguments: suggestion);
               },
               child: const Text('查看詳情'),
             ),
@@ -440,15 +428,15 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
   }
 
   void _shareSuggestion() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('分享功能即將推出')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('分享功能即將推出')));
   }
 
   void _saveSuggestion() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('建議已保存')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('建議已保存')));
   }
 
   void _provideFeedback() {
@@ -466,9 +454,9 @@ class _SuggestionScreenState extends ConsumerState<SuggestionScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('感謝您的反饋！')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('感謝您的反饋！')));
               },
               child: const Text('有幫助'),
             ),

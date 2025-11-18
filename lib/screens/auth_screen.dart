@@ -12,11 +12,7 @@ class AuthScreen extends ConsumerWidget {
     final authNotifier = ref.read(authNotifierProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('登入'),
-        centerTitle: true,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('登入'), centerTitle: true, elevation: 0),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -64,7 +60,10 @@ class AuthScreen extends ConsumerWidget {
               onPressed: authState.loading
                   ? null
                   : () async {
-                      await authNotifier.socialLogin('google', 'fake-google-token');
+                      await authNotifier.socialLogin(
+                        'google',
+                        'fake-google-token',
+                      );
                       final newUser = ref.read(authNotifierProvider).user;
                       if (newUser != null && context.mounted) {
                         Navigator.of(context).pushReplacementNamed('/home');
@@ -83,7 +82,10 @@ class AuthScreen extends ConsumerWidget {
               onPressed: authState.loading
                   ? null
                   : () async {
-                      await authNotifier.socialLogin('facebook', 'fake-facebook-token');
+                      await authNotifier.socialLogin(
+                        'facebook',
+                        'fake-facebook-token',
+                      );
                       final newUser = ref.read(authNotifierProvider).user;
                       if (newUser != null && context.mounted) {
                         Navigator.of(context).pushReplacementNamed('/home');
@@ -102,7 +104,10 @@ class AuthScreen extends ConsumerWidget {
               onPressed: authState.loading
                   ? null
                   : () async {
-                      await authNotifier.socialLogin('apple', 'fake-apple-token');
+                      await authNotifier.socialLogin(
+                        'apple',
+                        'fake-apple-token',
+                      );
                       final newUser = ref.read(authNotifierProvider).user;
                       if (newUser != null && context.mounted) {
                         Navigator.of(context).pushReplacementNamed('/home');

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+  <!-- Stylized house with heart, warm palette -->
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1">
+      <stop offset="0%" stop-color="#F3D1E9"/>
+      <stop offset="100%" stop-color="#E7B7FF"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" x2="1">
+      <stop offset="0%" stop-color="#FFD7B5"/>
+      <stop offset="100%" stop-color="#FFB085"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="100%" height="100%" rx="24" fill="url(#g1)" />
+
+  <!-- Roof -->
+  <polygon points="40,130 160,40 280,130" fill="#7C4B9A" opacity="0.95" />
+
+  <!-- House body -->
+  <rect x="80" y="130" width="160" height="110" rx="12" fill="url(#g2)" stroke="#9B6CA8" stroke-width="3"/>
+
+  <!-- Door -->
+  <rect x="150" y="170" width="40" height="70" rx="6" fill="#8E5FA1"/>
+
+  <!-- Heart on house (warm touch) -->
+  <path d="M180 150
+           c0 -10 14 -20 26 -8
+           c12 -12 26 -2 26 8
+           c0 18 -26 34 -52 54
+           c-26 -20 -52 -36 -52 -54
+           c0 -10 14 -20 26 -8
+           z" fill="#FF6F91" opacity="0.95" transform="translate(-48,6) scale(0.45)"/>
+
+  <!-- Accent plant -->
+  <g transform="translate(50,220)">
+    <rect x="0" y="0" width="18" height="28" rx="4" fill="#6FA66F" />
+    <circle cx="9" cy="-6" r="14" fill="#9FE6A8" />
+  </g>
+
+</svg>
