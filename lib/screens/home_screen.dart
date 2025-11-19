@@ -104,12 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.home, size: 80, color: Theme.of(context).primaryColor),
-            const SizedBox(height: 24),
-            Text('主頁面', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 16),
-            Text('項目架構已建立完成', style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
