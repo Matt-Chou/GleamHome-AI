@@ -104,7 +104,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   _buildIntroPage(
                     title: '只需拍照',
-                    subtitle: '簡單拍攝照片',
+                    subtitle: '簡單拍攝/上傳照片',
                     icon: Icons.camera_alt,
                   ),
                   _buildIntroPage(
@@ -147,9 +147,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     OutlinedButton(
                       onPressed: () async {
                         try {
-                          // 使用 Firebase Auth 進行 登入
+                          // 確保先登出任何現有會話
+                          await FirebaseAuth.instance.signOut();
+                          
+                          // 使用 Firebase Auth 進行 Google 登入
                           final auth = FirebaseAuth.instance;
                           final googleProvider = GoogleAuthProvider();
+                          
+                          // 設定 GoogleAuthProvider 參數，強制顯示帳號選擇
+                          googleProvider.setCustomParameters({
+                            'prompt': 'select_account', // 強制顯示帳號選擇頁面
+                          });
                           
                           final userCredential = await auth.signInWithPopup(googleProvider);
                           final user = userCredential.user;
@@ -164,20 +172,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             Navigator.of(context).pushReplacementNamed('/home');
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('登入已取消')),
+                              const SnackBar(content: Text('Google 登入已取消')),
                             );
                           }
                         } catch (e) {
-                          debugPrint('登入錯誤: $e');
+                          debugPrint('Google 登入錯誤: $e');
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('登入錯誤: ${e.toString()}')),
+                            SnackBar(content: Text('Google 登入錯誤: ${e.toString()}')),
                           );
                         }
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
                       ),
-                      child: const Text('登入'),
+                      child: const Text('使用 Google 帳號登入'),
                     )
                   else
                     Row(

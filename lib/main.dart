@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options_secure.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
+import 'auth_wrapper.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
@@ -37,7 +38,8 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       initialRoute: '/',
       routes: {
-        '/': (context) => const OnboardingScreen(),
+        '/': (context) => const AuthWrapper(),
+        '/onboarding': (context) => const OnboardingScreen(),
         '/auth': (context) => const AuthScreen(),
         '/home': (context) => const HomeScreen(),
         '/camera': (context) => const CameraScreen(),
