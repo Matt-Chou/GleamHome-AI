@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
@@ -62,38 +64,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         },
         child: Stack(
           children: [
-            // 背景圖片與滑動手勢
-            GestureDetector(
-              onPanUpdate: (details) {
-                if (details.delta.dx > 5) {
-                  if (_currentPage > 0) {
-                    _pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                } else if (details.delta.dx < -5) {
-                  if (_currentPage < 3) {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                }
+            // 背景圖片與滑動
+            PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() => _currentPage = index);
               },
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildBackgroundImage('assets/images/onboarding/login1.png'),
-                  _buildBackgroundImage('assets/images/onboarding/login2.png'),
-                  _buildBackgroundImage('assets/images/onboarding/login3.png'),
-                  _buildBackgroundImage('assets/images/onboarding/login4.png'),
-                ],
-              ),
+              physics: const BouncingScrollPhysics(),
+              children: [
+                _buildBackgroundImage('assets/images/onboarding/login1.png'),
+                _buildBackgroundImage('assets/images/onboarding/login2.png'),
+                _buildBackgroundImage('assets/images/onboarding/login3.png'),
+                _buildBackgroundImage('assets/images/onboarding/login4.png'),
+              ],
             ),
             // 內容
             Align(
@@ -144,12 +127,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           onPressed: () async {
                             try {
                               await FirebaseAuth.instance.signOut();
-                              final auth = FirebaseAuth.instance;
-                              final googleProvider = GoogleAuthProvider();
-                              googleProvider.setCustomParameters({
-                                'prompt': 'select_account',
-                              });
-                              final userCredential = await auth.signInWithPopup(googleProvider);
+                              UserCredential? userCredential;
+                              if (kIsWeb) {
+                                // Web 平台
+                                final googleProvider = GoogleAuthProvider();
+                                googleProvider.setCustomParameters({'prompt': 'select_account'});
+                                userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+                              } else {
+                                // Android/iOS - 使用 google_sign_in 套件
+                                await GoogleSignIn.instance.initialize();
+                                final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
+                                final GoogleSignInAuthentication auth = googleUser.authentication;
+                                final credential = GoogleAuthProvider.credential(
+                                  idToken: auth.idToken,
+                                );
+                                userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+                              }
                               final user = userCredential.user;
                               if (user != null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
