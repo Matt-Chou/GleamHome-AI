@@ -7,7 +7,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/photo_analysis.dart';
+import '../models/analysis_record.dart';
+import '../services/storage_service.dart';
+import '../services/firestore_service.dart';
 
 /// 相機屏幕 - 實時拍照和選擇照片
 class CameraScreen extends ConsumerStatefulWidget {
@@ -20,12 +24,16 @@ class CameraScreen extends ConsumerStatefulWidget {
 class _CameraScreenState extends ConsumerState<CameraScreen> {
   // Web/Android/iOS platform detection
   final ImagePicker _imagePicker = ImagePicker();
+  final StorageService _storageService = StorageService();
+  final FirestoreService _firestoreService = FirestoreService();
   cam.CameraController? _cameraController; // Only for Android/iOS
   List<cam.CameraDescription>? _cameras;
   XFile? _selectedImage;
   bool _showPreview = false;
   bool _isCameraInitialized = false;
   bool _isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  bool _isUploading = false;
+  bool _isFromGallery = false; // 記錄是否從相簿選擇
 
   @override
   bool _onlyGallery = false;
@@ -152,33 +160,39 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
               // 操作按鈕
               Row(
                 children: [
-                  // 重新拍照
+                  // 重新拍照/重新選擇（根據來源決定）
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {
+                      onPressed: _isUploading ? null : () async {
                         setState(() {
                           _showPreview = false;
                           _selectedImage = null;
                         });
+                        // 根據來源決定要開啟相機還是相簿
+                        if (_isFromGallery) {
+                          await _pickFromGallery();
+                        } else {
+                          await _takePhoto();
+                        }
                       },
-                      icon: const Icon(Icons.close),
-                      label: const Text('重新拍照'),
+                      icon: Icon(_isFromGallery ? Icons.photo_library : Icons.camera_alt),
+                      label: Text(_isFromGallery ? '重新選擇' : '重新拍照'),
                     ),
                   ),
                   const SizedBox(width: 12),
 
-                  // 確認繼續
+                  // 上傳分析
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: () {
-                        // 跳轉到照片審核頁面
-                        Navigator.of(context).pushNamed(
-                          '/photo-review',
-                          arguments: _selectedImage?.path,
-                        );
-                      },
-                      icon: const Icon(Icons.check),
-                      label: const Text('確認'),
+                      onPressed: _isUploading ? null : _uploadAndAnalyze,
+                      icon: _isUploading 
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.cloud_upload),
+                      label: Text(_isUploading ? '上傳中...' : '上傳分析'),
                     ),
                   ),
                 ],
@@ -224,49 +238,32 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   /// 拍照（平台分支）
   Future<void> _takePhoto() async {
-    if (kIsWeb) {
-      // Web: 使用 image_picker
-      try {
-        final XFile? photo = await _imagePicker.pickImage(
-          source: ImageSource.camera,
-          imageQuality: 90,
-        );
-        if (photo != null) {
-          setState(() {
-            _selectedImage = photo;
-            _showPreview = true;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Web 無法打開相機: $e')));
-        }
-      }
-    } else if (_isMobile &&
-        _cameraController != null &&
-        _cameraController!.value.isInitialized) {
-      // Android/iOS: 使用 camera plugin
-      try {
-        final cam.XFile photo = await _cameraController!.takePicture();
+    try {
+      // 統一使用 image_picker 的相機功能（支援 Android/iOS/Web）
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 90,
+      );
+      
+      if (photo != null) {
         setState(() {
-          _selectedImage = XFile(photo.path);
+          _selectedImage = photo;
           _showPreview = true;
+          _isFromGallery = false; // 標記為相機來源
         });
-      } catch (e) {
+      } else {
+        // 使用者取消拍照
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('無法拍照: $e')));
+          Navigator.of(context).pop();
         }
       }
-    } else {
-      // 其他平台或初始化失敗
+    } catch (e) {
+      debugPrint('拍照錯誤: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('此平台暫不支援相機功能')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('無法開啟相機: $e')),
+        );
+        Navigator.of(context).pop();
       }
     }
   }
@@ -283,13 +280,119 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         setState(() {
           _selectedImage = image;
           _showPreview = true;
+          _isFromGallery = true; // 標記為相簿來源
         });
+      } else {
+        // 使用者取消選擇
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       }
     } catch (e) {
+      debugPrint('選擇照片錯誤: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('無法存取相冊: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('無法存取相簿: $e')),
+        );
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  /// 上傳影像並執行分析
+  Future<void> _uploadAndAnalyze() async {
+    if (_selectedImage == null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('請先登入')),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      // 1. 上傳影像到 Firebase Storage
+      final file = File(_selectedImage!.path);
+      final imageUrl = await _storageService.uploadImage(file, user.uid);
+
+      // 2. 建立分析記錄（目前先儲存空的分析結果）
+      final record = AnalysisRecord(
+        id: '', // Firestore 會自動產生
+        userId: user.uid,
+        imageUrl: imageUrl,
+        timestamp: DateTime.now(),
+        analysisResults: {
+          'status': 'pending',
+          'message': '分析中...',
+        },
+        deviceInfo: Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown',
+      );
+
+      // 3. 儲存到 Firestore
+      final recordId = await _firestoreService.addAnalysisRecord(record);
+
+      if (mounted) {
+        // 顯示成功對話框
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '上傳成功！',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '影像已儲存到雲端',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // 關閉對話框
+                  Navigator.of(context).pop(); // 返回主畫面
+                },
+                child: const Text('確定'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ 上傳失敗: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('上傳失敗: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
       }
     }
   }

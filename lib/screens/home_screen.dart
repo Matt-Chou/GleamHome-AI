@@ -1,6 +1,10 @@
 /// 主頁面
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firestore_service.dart';
+import '../services/storage_service.dart';
+import '../models/analysis_record.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final FirestoreService _firestoreService = FirestoreService();
+  final StorageService _storageService = StorageService();
 
   void _showMenuDrawer() {
     final user = FirebaseAuth.instance.currentUser;
@@ -240,29 +246,295 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHistoryPage() {
-    // 這裡之後會從資料庫讀取歷史記錄
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (user == null) {
+      return const Center(child: Text('請先登入'));
+    }
+
+    return StreamBuilder<List<AnalysisRecord>>(
+      stream: _firestoreService.getUserRecordsStream(user.uid),
+      builder: (context, snapshot) {
+        // 載入中
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // 錯誤處理
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('載入失敗: ${snapshot.error}'),
+              ],
+            ),
+          );
+        }
+
+        final records = snapshot.data ?? [];
+
+        // 無資料
+        if (records.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history,
+                  size: 80,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '暫無歷史記錄',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '開始使用後，您的分析記錄會顯示在這裡',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // 顯示記錄列表
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: records.length,
+          itemBuilder: (context, index) {
+            final record = records[index];
+            return _buildRecordCard(record);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRecordCard(AnalysisRecord record) {
+    final dateFormat = DateFormat('yyyy/MM/dd HH:mm');
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          _showRecordDetails(record);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // 縮圖
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  record.thumbnailUrl ?? record.imageUrl,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image, size: 32),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // 資訊
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      dateFormat.format(record.timestamp),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      record.analysisResults['message'] ?? '分析完成',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.phone_android,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          record.deviceInfo,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // 箭頭
+              Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRecordDetails(AnalysisRecord record) {
+    final dateFormat = DateFormat('yyyy/MM/dd HH:mm:ss');
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          contentPadding: EdgeInsets.zero,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 圖片
+              Image.network(
+                record.imageUrl,
+                height: 300,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 300,
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.error_outline, size: 48),
+                    ),
+                  );
+                },
+              ),
+
+              // 資訊
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '分析記錄',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDetailRow('時間', dateFormat.format(record.timestamp)),
+                    _buildDetailRow('裝置', record.deviceInfo),
+                    _buildDetailRow('狀態', record.analysisResults['status'] ?? 'unknown'),
+                    if (record.analysisResults['message'] != null)
+                      _buildDetailRow('備註', record.analysisResults['message']),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('確認刪除'),
+                    content: const Text('確定要刪除這筆記錄嗎？'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('刪除', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && mounted) {
+                  try {
+                    // 先刪除 Storage 中的影像
+                    debugPrint('🗑️ 開始刪除影像: ${record.imageUrl}');
+                    await _storageService.deleteImage(record.imageUrl);
+                    debugPrint('✅ 影像刪除成功');
+                    
+                    // 再刪除 Firestore 記錄
+                    debugPrint('🗑️ 開始刪除記錄: ${record.id}');
+                    await _firestoreService.deleteAnalysisRecord(record.id);
+                    debugPrint('✅ 記錄刪除成功');
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('✅ 已刪除'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('❌ 刪除失敗: $e');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('刪除失敗: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+              child: const Text('刪除', style: TextStyle(color: Colors.red)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('關閉'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.history,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '暫無歷史記錄',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
+          SizedBox(
+            width: 60,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '開始使用後，您的分析記錄會顯示在這裡',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+          Expanded(
+            child: Text(value),
           ),
         ],
       ),
