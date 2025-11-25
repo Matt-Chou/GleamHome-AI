@@ -34,6 +34,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   bool _isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
   bool _isUploading = false;
   bool _isFromGallery = false; // 記錄是否從相簿選擇
+  double _uploadProgress = 0.0; // 上傳進度 0.0 - 1.0
+  String _uploadStatus = ''; // 上傳狀態訊息
 
   @override
   bool _onlyGallery = false;
@@ -197,6 +199,41 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                   ),
                 ],
               ),
+              
+              // 上傳進度條
+              if (_isUploading) ...[
+                const SizedBox(height: 12),
+                Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: _uploadProgress,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                      minHeight: 4,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _uploadStatus,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        Text(
+                          '${(_uploadProgress * 100).toStringAsFixed(0)}%',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+              
               const SizedBox(height: 12),
 
               // 照片信息
@@ -315,14 +352,34 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
     setState(() {
       _isUploading = true;
+      _uploadProgress = 0.0;
+      _uploadStatus = '準備上傳...';
     });
 
     try {
+      debugPrint('🚀 開始上傳流程...');
+      
       // 1. 上傳影像到 Firebase Storage
+      setState(() {
+        _uploadProgress = 0.1;
+        _uploadStatus = '正在上傳影像...';
+      });
+      
+      debugPrint('📤 步驟 1: 上傳影像到 Storage');
       final file = File(_selectedImage!.path);
-      final imageUrl = await _storageService.uploadImage(file, user.uid);
+      final imageUrl = await _storageService.uploadImage(file, user.uid)
+          .timeout(const Duration(seconds: 60), onTimeout: () {
+        throw Exception('上傳超時，請檢查網路連線');
+      });
+      debugPrint('✅ Storage 上傳完成: $imageUrl');
 
-      // 2. 建立分析記錄（目前先儲存空的分析結果）
+      // 2. 建立分析記錄
+      setState(() {
+        _uploadProgress = 0.6;
+        _uploadStatus = '建立分析記錄...';
+      });
+      
+      debugPrint('📝 步驟 2: 建立分析記錄');
       final record = AnalysisRecord(
         id: '', // Firestore 會自動產生
         userId: user.uid,
@@ -336,10 +393,37 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       );
 
       // 3. 儲存到 Firestore
-      final recordId = await _firestoreService.addAnalysisRecord(record);
+      setState(() {
+        _uploadProgress = 0.8;
+        _uploadStatus = '儲存到雲端...';
+      });
+      
+      debugPrint('💾 步驟 3: 儲存到 Firestore');
+      final recordId = await _firestoreService.addAnalysisRecord(record)
+          .timeout(const Duration(seconds: 30), onTimeout: () {
+        throw Exception('Firestore 儲存超時');
+      });
+      debugPrint('✅ Firestore 儲存完成: $recordId');
+
+      // 完成
+      setState(() {
+        _uploadProgress = 1.0;
+        _uploadStatus = '上傳完成！';
+      });
+
+      // 停止上傳狀態
+      debugPrint('🎉 所有步驟完成，停止上傳狀態');
+      await Future.delayed(const Duration(milliseconds: 500)); // 讓使用者看到 100%
+      
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
 
       if (mounted) {
         // 顯示成功對話框
+        debugPrint('📢 顯示成功對話框');
         await showDialog(
           context: context,
           barrierDismissible: false,
@@ -350,24 +434,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                 const Icon(
                   Icons.check_circle,
                   color: Colors.green,
-                  size: 64,
+                  size: 80,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 Text(
                   '上傳成功！',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(
                   '影像已儲存到雲端',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
             actions: [
-              TextButton(
+              FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // 關閉對話框
                   Navigator.of(context).pop(); // 返回主畫面
@@ -375,24 +462,26 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                 child: const Text('確定'),
               ),
             ],
+            actionsAlignment: MainAxisAlignment.center,
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ 上傳失敗: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _uploadProgress = 0.0;
+          _uploadStatus = '';
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('上傳失敗: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-        });
       }
     }
   }

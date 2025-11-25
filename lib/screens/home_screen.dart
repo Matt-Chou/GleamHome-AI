@@ -474,6 +474,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 if (confirm == true && mounted) {
                   try {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) {
+                      throw Exception('使用者未登入');
+                    }
+                    
                     // 先刪除 Storage 中的影像
                     debugPrint('🗑️ 開始刪除影像: ${record.imageUrl}');
                     await _storageService.deleteImage(record.imageUrl);
@@ -481,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     
                     // 再刪除 Firestore 記錄
                     debugPrint('🗑️ 開始刪除記錄: ${record.id}');
-                    await _firestoreService.deleteAnalysisRecord(record.id);
+                    await _firestoreService.deleteAnalysisRecord(user.uid, record.id);
                     debugPrint('✅ 記錄刪除成功');
                     
                     if (mounted) {

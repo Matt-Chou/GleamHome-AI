@@ -6,8 +6,10 @@ import '../models/analysis_record.dart';
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// 取得分析記錄集合的參考
-  CollectionReference get _recordsCollection => _firestore.collection('analysis_records');
+  /// 取得使用者的分析記錄子集合參考
+  CollectionReference _getUserAnalysisRecordsCollection(String userId) {
+    return _firestore.collection('users').doc(userId).collection('analysisRecords');
+  }
 
   /// 新增分析記錄
   /// 
@@ -15,7 +17,8 @@ class FirestoreService {
   Future<String> addAnalysisRecord(AnalysisRecord record) async {
     try {
       debugPrint('📝 新增分析記錄...');
-      final docRef = await _recordsCollection.add(record.toFirestore());
+      final recordsCollection = _getUserAnalysisRecordsCollection(record.userId);
+      final docRef = await recordsCollection.add(record.toFirestore());
       debugPrint('✅ 記錄已儲存: ${docRef.id}');
       return docRef.id;
     } catch (e) {
@@ -25,9 +28,10 @@ class FirestoreService {
   }
 
   /// 取得單一分析記錄
-  Future<AnalysisRecord?> getAnalysisRecord(String recordId) async {
+  Future<AnalysisRecord?> getAnalysisRecord(String userId, String recordId) async {
     try {
-      final doc = await _recordsCollection.doc(recordId).get();
+      final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+      final doc = await recordsCollection.doc(recordId).get();
       if (doc.exists) {
         return AnalysisRecord.fromFirestore(doc);
       }
@@ -43,9 +47,8 @@ class FirestoreService {
   /// [userId] - 使用者 ID
   /// [limit] - 限制數量（可選）
   Stream<List<AnalysisRecord>> getUserRecordsStream(String userId, {int? limit}) {
-    Query query = _recordsCollection
-        .where('userId', isEqualTo: userId)
-        .orderBy('timestamp', descending: true);
+    final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+    Query query = recordsCollection.orderBy('timestamp', descending: true);
 
     if (limit != null) {
       query = query.limit(limit);
@@ -61,9 +64,8 @@ class FirestoreService {
   /// 取得使用者的所有分析記錄（一次性查詢）
   Future<List<AnalysisRecord>> getUserRecords(String userId, {int? limit}) async {
     try {
-      Query query = _recordsCollection
-          .where('userId', isEqualTo: userId)
-          .orderBy('timestamp', descending: true);
+      final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+      Query query = recordsCollection.orderBy('timestamp', descending: true);
 
       if (limit != null) {
         query = query.limit(limit);
@@ -80,9 +82,10 @@ class FirestoreService {
   }
 
   /// 更新分析記錄
-  Future<void> updateAnalysisRecord(String recordId, Map<String, dynamic> data) async {
+  Future<void> updateAnalysisRecord(String userId, String recordId, Map<String, dynamic> data) async {
     try {
-      await _recordsCollection.doc(recordId).update(data);
+      final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+      await recordsCollection.doc(recordId).update(data);
       debugPrint('✅ 記錄已更新: $recordId');
     } catch (e) {
       debugPrint('❌ 更新記錄失敗: $e');
@@ -91,9 +94,10 @@ class FirestoreService {
   }
 
   /// 刪除分析記錄
-  Future<void> deleteAnalysisRecord(String recordId) async {
+  Future<void> deleteAnalysisRecord(String userId, String recordId) async {
     try {
-      await _recordsCollection.doc(recordId).delete();
+      final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+      await recordsCollection.doc(recordId).delete();
       debugPrint('🗑️ 記錄已刪除: $recordId');
     } catch (e) {
       debugPrint('❌ 刪除記錄失敗: $e');
@@ -104,9 +108,8 @@ class FirestoreService {
   /// 批次刪除使用者的所有記錄
   Future<void> deleteAllUserRecords(String userId) async {
     try {
-      final snapshot = await _recordsCollection
-          .where('userId', isEqualTo: userId)
-          .get();
+      final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+      final snapshot = await recordsCollection.get();
 
       final batch = _firestore.batch();
       for (var doc in snapshot.docs) {
@@ -124,8 +127,8 @@ class FirestoreService {
   /// 取得記錄總數
   Future<int> getUserRecordCount(String userId) async {
     try {
-      final snapshot = await _recordsCollection
-          .where('userId', isEqualTo: userId)
+      final recordsCollection = _getUserAnalysisRecordsCollection(userId);
+      final snapshot = await recordsCollection
           .count()
           .get();
       return snapshot.count ?? 0;
